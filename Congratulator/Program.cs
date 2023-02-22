@@ -10,9 +10,10 @@ namespace Congratulator
     {
         static void Main(string[] args)
         {
-            // Создание подключения к БД
+            // !!Параметры подключения к БД, поменять под свой сервер
             string connStr = "server=localhost;user=root;database=peopledates;password=root";
             MySqlConnection conn = new MySqlConnection(connStr);
+            // Создание подключения к БД
             try
             {
                 conn.Open();
@@ -21,6 +22,15 @@ namespace Congratulator
             {
                 Console.WriteLine("Не подключилась БД");
             }
+
+
+            PersonDate personToDelete;
+            PersonDate[] tempMassForSort;
+            int countOfRecords = getCountRows();
+            PersonDate[] massPeople = new PersonDate[countOfRecords];
+            string commandMenu, commandDopMenu;
+            bool boolForMenu, boolForMenuDop;
+
 
             // Получение количества записей в БД
             int getCountRows()
@@ -36,12 +46,6 @@ namespace Congratulator
                 reader.Close();
                 return count;
             }
-
-            PersonDate tPerson;
-            PersonDate[] tempMassSort;
-            int c = getCountRows();
-            PersonDate[] massPeople = new PersonDate[c];
-
             // Получения массива объектов
             void getPersonFromBD()
             {
@@ -53,7 +57,6 @@ namespace Congratulator
                 while (reader.Read())
                 {
                     massPeople[i] = new PersonDate();
-                    massPeople[i].Id = Convert.ToInt32(reader[0]);
                     massPeople[i].Surname = reader[1].ToString();
                     massPeople[i].Date = DateTime.Parse(reader[2].ToString());
                     i++;
@@ -63,7 +66,77 @@ namespace Congratulator
                 reader.Close();
             }
 
-            // Сортировка по датам
+
+            // Функция для ввода нового именинника
+            void newPersonDate()
+            {
+                int count = massPeople.Length;
+                Array.Resize(ref massPeople, (massPeople.Length + 1));
+                massPeople[count] = new PersonDate();
+                Console.Write("Введите имя именинника: ");
+                massPeople[count].Surname = Console.ReadLine();
+                massPeople[count].Date = inputDoB();
+                Console.Clear();
+                Console.WriteLine("Поздравляем, вы успешно добавили нового именинника!");
+            }
+            // Функция для удаления именинника
+            PersonDate deletePersonDate()
+            {
+                string nameToDelete;
+                DateTime dateToDelete;
+                int num = 0;
+                PersonDate tempPerson = new PersonDate();
+                for (int l = 0; l < massPeople.Length; l++)
+                {
+                    massPeople[l].Print();
+                }
+                Console.Write("Введите имя того, кого хотите удалить: ");
+                nameToDelete = Console.ReadLine();
+                dateToDelete = inputDoB();
+                for (int i = 0; i < massPeople.Length; i++)
+                {
+                    if (massPeople[i].Surname == nameToDelete && massPeople[i].Date == dateToDelete)
+                    {
+                        num = i;
+                        tempPerson = massPeople[num];
+                    }
+                }
+                List<PersonDate> listOfPerson = new List<PersonDate>(massPeople);
+                listOfPerson.RemoveAt(listOfPerson.IndexOf(massPeople[num]));
+                massPeople = listOfPerson.ToArray();
+                Console.Clear();
+                Console.WriteLine("Вы успешно удалили именинника");
+                return tempPerson;
+            }
+            // Функция для изменения именинника
+            int changePersonDate()
+            {
+                int numToChange = 0;
+                Console.WriteLine("Нужно ввести отдельно имя и отдельно дату того, кого хотите изменить");
+                Console.Write("Введите имя того, кого хотите изменить: ");
+                string name = Console.ReadLine();
+                DateTime dateChange = inputDoB();
+                Console.Write("Введите новое имя: ");
+                string newName = Console.ReadLine();
+                DateTime newDate = inputDoB();
+                for (int i = 0; i < massPeople.Length; i++)
+                {
+                    if (massPeople[i].Surname == name && massPeople[i].Date == dateChange)
+                    {
+                        numToChange++;
+                        massPeople[i].Surname = newName;
+                        massPeople[i].Date = newDate;
+                    }
+                }
+                if (numToChange == 0)
+                    Console.WriteLine("Такой именинник не найден");
+                else
+                    Console.WriteLine("Изменение успешно внесено");
+                return numToChange;
+            }
+
+
+            // Сортировка по датам относительно даты сегодняшнего дня
             void sortByDate(PersonDate[] massOfPeople)
             {
                 PersonDate[] tempMass = new PersonDate[1];
@@ -84,98 +157,21 @@ namespace Congratulator
                     }
                 }
             }
-           
-            // Печать просроченных
-            void printLaterDates(PersonDate[] massOfPeople)
+            // Функция ввода даты дня рождения с консоли
+            DateTime inputDoB()
             {
-                string dateNewYear = "01.01." + (DateTime.Now.Year + 1).ToString();
-                DateTime tempDate;
-                DateTime.TryParseExact(dateNewYear,"dd.MM.yyyy", null, DateTimeStyles.None , out tempDate);
-                TimeSpan time;
-                time = tempDate - DateTime.Now;
-                Console.WriteLine("Вы пропустили в этом году:");
-                for (int i = 0; i < massOfPeople.Length; i++)
-                {
+                DateTime dob;
+                string input;
 
-                    if (howDaysToB(massOfPeople[i].Date) >= time.Days)
-                    {
-                        massOfPeople[i].Print();
-                    }
+                do
+                {
+                    Console.WriteLine("Введите дату рождения в формате дд.мм.гггг (день.месяц.год):");
+                    input = Console.ReadLine();
+                }
+                while (!DateTime.TryParseExact(input, "dd.MM.yyyy", null, DateTimeStyles.None, out dob));
 
-                }
+                return dob;
             }
-           
-            // Функция для ввода нового именинника
-            void newPersonDate()
-            {
-                Array.Resize(ref massPeople, (c + 1) );
-                massPeople[c] = new PersonDate();
-                massPeople[c].Id = c ;
-                Console.Write("Введите имя именинника: ");
-                massPeople[c].Surname = Console.ReadLine();
-                massPeople[c].Date = inputDoB();
-                c++;
-                Console.Clear();
-                Console.WriteLine("Поздравляем, вы успешно добавили нового именинника!");
-            }
-           
-            // Функция для удаления именинника
-            PersonDate deletePersonDate()
-            {
-                string nameToDelete;
-                DateTime dateToDelete;
-                int num = 0;
-                PersonDate tempPerson = new PersonDate();
-                for (int l = 0; l < massPeople.Length; l++)
-                {
-                    massPeople[l].Print();
-                }
-                Console.Write("Введите имя того, кого хотите удалить: ");
-                nameToDelete = Console.ReadLine();
-                dateToDelete = inputDoB();
-                for (int i = 0; i < c; i++)
-                {
-                    if (massPeople[i].Surname == nameToDelete && massPeople[i].Date == dateToDelete)
-                    {
-                        num = i;
-                        tempPerson = massPeople[num];
-                    }
-                }
-                List<PersonDate> listOfPerson = new List<PersonDate>(massPeople);
-                listOfPerson.RemoveAt(listOfPerson.IndexOf(massPeople[num]));
-                massPeople = listOfPerson.ToArray();
-                c--;
-                Console.Clear();
-                Console.WriteLine("Вы успешно удалили именинника");
-                return tempPerson;
-            }
-           
-            // Функция для изменения именинника
-            int changePersonDate()
-            {
-                int numToChange = 0;
-                Console.Write("Введите имя того, кого хотите изменить: ");
-                string name = Console.ReadLine();
-                DateTime dateChange = inputDoB();
-                Console.Write("Введите новое имя: ");
-                string newName = Console.ReadLine();
-                DateTime newDate = inputDoB();
-                for (int i = 0; i < c; i++)
-                {
-                    if (massPeople[i].Surname == name && massPeople[i].Date == dateChange)
-                    {
-                        numToChange = i;
-                        massPeople[i].Surname = newName;
-                        massPeople[i].Date = newDate;
-                    }
-                }
-                if (numToChange == 0)
-                    Console.WriteLine("Такой именинник не найден");
-                else
-                    Console.WriteLine("Изменение успешно внесено");
-                return numToChange;
-            }
-           
             // Функция вычисления остатка дней до дня рождения
             int howDaysToB(DateTime date)
             {
@@ -210,7 +206,99 @@ namespace Congratulator
                 result = dateDays.Days;
                 return result;
             }
-           
+
+            // Вывод сегодняшней даты
+            void PrintDateToday()
+            {
+                Console.Write("Сегодня: " + DateTime.Today.ToString("d"));
+                Console.WriteLine();
+            }
+            // Печать просроченных
+            void PrintLaterDates(PersonDate[] massOfPeople)
+            {
+                string dateNewYear = "01.01." + (DateTime.Now.Year + 1).ToString();
+                DateTime tempDate;
+                int countOfLaters = 0;
+                DateTime.TryParseExact(dateNewYear,"dd.MM.yyyy", null, DateTimeStyles.None , out tempDate);
+                TimeSpan time;
+                time = tempDate - DateTime.Now;
+                Console.WriteLine("Вы пропустили в этом году:");
+                for (int i = 0; i < massOfPeople.Length; i++)
+                {
+
+                    if (howDaysToB(massOfPeople[i].Date) >= time.Days)
+                    {
+                        massOfPeople[i].Print();
+                        countOfLaters++;
+                    }
+
+                }
+                if (countOfLaters == 0)
+                    Console.WriteLine("В этом году еще ни у кого не было дня рождения!");
+            }
+            // Вывод ближайших именинников
+            void PrintNextBirthday(PersonDate[] personDates)
+            {
+                int countTodayBitrhday = 0;
+                int countTwoWeeks = 0;
+                int numberElementmassTwoWeeks = 0;
+                Console.Write("Именинники на сегодня:");
+                for (int i = 0; i < personDates.Length; i++)
+                {
+                    if (howDaysToB(personDates[i].Date) == 0)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine(personDates[i].Surname);
+                        countTodayBitrhday++;
+                    }
+                }
+                if (countTodayBitrhday == 0)
+                {
+                    Console.WriteLine(" Сегодня нет именинников =(");
+                }
+
+                Console.WriteLine("Ближайшие именинники (2 недели):");
+
+                for (int j = 0; j < personDates.Length; j++)
+                {
+                    if (howDaysToB(massPeople[j].Date) < 14 && howDaysToB(massPeople[j].Date) != 0)
+                        countTwoWeeks++;
+                }
+                PersonDate[] tempMassDates = new PersonDate[countTwoWeeks];
+
+                for (int n = 0; n < personDates.Length; n++)
+                {
+                    if (howDaysToB(massPeople[n].Date) < 14 && howDaysToB(massPeople[n].Date) != 0)
+                    {
+                        tempMassDates[numberElementmassTwoWeeks] = massPeople[n];
+                        numberElementmassTwoWeeks++;
+                    }
+                }
+                sortByDate(tempMassDates);
+
+                for (int l = 0; l < tempMassDates.Length; l++)
+                {
+                    tempMassDates[l].Print();
+                }
+
+                if (countTwoWeeks == 0)
+                {
+                    Console.WriteLine("В ближайшие две недели нет именинников");
+                }
+                Console.WriteLine();
+            }
+            // Вывод всех именинников
+            void PrintAllBithday(PersonDate[] personDates)
+            {
+                Console.WriteLine("Все дни рождения в вашей книге:");
+                for (int i = 0; i < personDates.Length; i++)
+                {
+                    personDates[i].Print();
+                }
+            }
+
+
+
             // Вывод меню верхнего уровня
             void PrintMenuTop()
             {
@@ -222,7 +310,6 @@ namespace Congratulator
                 Console.WriteLine("5. Редактировать запись о дне рождения");
                 Console.WriteLine("0. Выход из программы");
             }
-           
             // Вывод меню дополнительных возможностей
             void PrintMenuDop()
             {
@@ -233,98 +320,18 @@ namespace Congratulator
                 Console.WriteLine("0. Выйти на уровень выше");
             }
             
-            // Вывод ближайших именинников
-            void PrintNextBirthday(PersonDate[] personDates)
-            {
-                int i = 0;
-                int j = 0;
-                int k = 0;
-                Console.Write("Именинники на сегодня:");
-                for (int c1 = 0; c1 < personDates.Length; c1++)
-                {
-                    if (howDaysToB(personDates[c1].Date) == 0)
-                    {
-                        Console.WriteLine();
-                        Console.WriteLine(personDates[c1].Surname);
-                        i++;
-                    }
-                }
-                if (i == 0)
-                {
-                    Console.WriteLine(" Сегодня нет именинников =(");
-                }
-
-                Console.WriteLine("Ближайшие именинники (2 недели):");
-
-                for (int c2 = 0; c2 < personDates.Length; c2++)
-                {
-                    if (howDaysToB(massPeople[c2].Date) < 14 && howDaysToB(massPeople[c2].Date) != 0)
-                        j++;
-                }
-                PersonDate[] tempMassDates = new PersonDate[j];
-
-                for (int c3 = 0; c3 < personDates.Length; c3++)
-                {
-                    if (howDaysToB(massPeople[c3].Date) < 14 && howDaysToB(massPeople[c3].Date) != 0)
-                    {
-                        tempMassDates[k] = massPeople[c3];
-                        k++;
-                    }
-                }
-                sortByDate(tempMassDates);
-
-                for (int l = 0; l < k; l++)
-                {
-                    tempMassDates[l].Print();
-                }
-
-                if (j == 0)
-                {
-                    Console.WriteLine("В ближайшие две недели нет именинников");
-                }
-                Console.WriteLine();
-            }
-           
-            // Вывод всех именинников
-            void PrintAllBithday(PersonDate[] personDates)
-            {
-                Console.WriteLine("Все дни рождения в вашей книге:");
-                for (int i = 0; i < personDates.Length; i++)
-                {
-                    personDates[i].Print();
-                }
-            }
-           
-            // Функция ввода даты дня рождения с консоли
-            DateTime inputDoB()
-            {
-                DateTime dob;
-                string input;
-
-                do
-                {
-                    Console.WriteLine("Введите дату рождения в формате дд.мм.гггг (день.месяц.год):");
-                    input = Console.ReadLine();
-                }
-                while (!DateTime.TryParseExact(input, "dd.MM.yyyy", null, DateTimeStyles.None, out dob));
-
-                return dob;
-            }
-
-
 
             // Начало работы
             getPersonFromBD();
-            PrintNextBirthday(massPeople);
-
-            // цикл с выводом меню
-            string commandMenu;
-            string commandDopMenu;
-            bool tempBool;
-            bool tempBoolSec;
+            if (countOfRecords > 0)
+            {
+                PrintDateToday();
+                PrintNextBirthday(massPeople);
+            }
+            // Вывод меню
             do
             {
-                tempBool = true;
+                boolForMenu = true;
                 PrintMenuTop();
                 commandMenu = Console.ReadLine();
 
@@ -332,41 +339,45 @@ namespace Congratulator
                 {
                     case "1":
                         {
-                            tempMassSort = massPeople;
+                            tempMassForSort = massPeople;
                             Console.Clear();
+                            PrintDateToday();
                             PrintAllBithday(massPeople);
                             Console.WriteLine();
                             do
                             {
-                                tempBoolSec = true;
+                                boolForMenuDop = true;
                                 PrintMenuDop();
                                 commandDopMenu = Console.ReadLine();
                                 switch (commandDopMenu)
                                 {
                                     case "1":{
                                             Console.Clear();
-                                            sortByDate(tempMassSort);
-                                            for (int i = 0; i < tempMassSort.Length; i++)
+                                            sortByDate(tempMassForSort);
+                                            PrintDateToday();
+                                            for (int i = 0; i < tempMassForSort.Length; i++)
                                             {
-                                                tempMassSort[i].Print();
+                                                tempMassForSort[i].Print();
                                             }
                                             Console.ReadLine();
                                         }
                                         break;
                                     case "2":{
                                             Console.Clear();
-                                            PrintNextBirthday(tempMassSort);
+                                            PrintDateToday();
+                                            PrintNextBirthday(tempMassForSort);
                                             Console.ReadLine();
                                         }
                                         break;
                                     case "3": {
                                             Console.Clear();
-                                            printLaterDates(tempMassSort);
+                                            PrintDateToday();
+                                            PrintLaterDates(tempMassForSort);
                                             Console.ReadLine();
                                         }
                                         break;
                                     case "0":
-                                        tempBoolSec = false;
+                                        boolForMenuDop = false;
                                         Console.Clear();
                                         break;
                                     default:
@@ -377,13 +388,14 @@ namespace Congratulator
                                         break;
                                 }
 
-                            } while (tempBoolSec);
+                            } while (boolForMenuDop);
                             
                         }
                         break;
                     case "2":
                         {
                             Console.Clear();
+                            PrintDateToday();
                             PrintNextBirthday(massPeople);
                         }
                         break;
@@ -396,8 +408,8 @@ namespace Congratulator
                         break;
                     case "4":{
                             Console.Clear();
-                            tPerson = deletePersonDate();
-                            tPerson.DeleteFromBD(conn);
+                            personToDelete = deletePersonDate();
+                            personToDelete.DeleteFromBD(conn);
                         }
                         break;
                     case "5":{
@@ -408,7 +420,7 @@ namespace Congratulator
                         }
                         break;
                     case "0":
-                        tempBool = false;
+                        boolForMenu = false;
                         break;
                     default:
                         {
@@ -419,9 +431,9 @@ namespace Congratulator
                 }
 
             }
-            while (tempBool);
+            while (boolForMenu);
 
-
+            // Закрытие соединения с БД
             conn.Close();
         }
     }

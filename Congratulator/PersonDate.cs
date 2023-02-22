@@ -5,8 +5,8 @@ namespace Congratulator
 {
     internal class PersonDate
     {
-        public int Id
-        { get; set; }
+        private int Id
+        { get;}
         public string Surname
         { get; set; }
 
@@ -14,7 +14,7 @@ namespace Congratulator
         { get; set; }
         public void Print()
         {
-            Console.WriteLine(Surname + " " + Date.ToString("d"));
+            Console.WriteLine("{0,40}", Surname + " - " + Date.ToString("d"));
         }
         public void WriteToDB(MySqlConnection conn)
         {
